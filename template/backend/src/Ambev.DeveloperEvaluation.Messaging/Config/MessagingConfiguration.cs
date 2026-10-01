@@ -1,23 +1,32 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Ambev.DeveloperEvaluation.Messaging.Handlers;
+using Ambev.DeveloperEvaluation.Messaging.Implementations;
+using Ambev.DeveloperEvaluation.Messaging.Interfaces;
+using Microsoft.Extensions.DependencyInjection;
+using Rebus.Config;
+using Rebus.Transport.InMem;
 using System.Diagnostics.CodeAnalysis;
 
 namespace Ambev.DeveloperEvaluation.Messaging.Config
 {
     /// <summary>
-    /// Centralized configuration class for Rebus setup and dependency injection.
+    /// Rebus setup and dependency injection of the messaging components.
     /// </summary>
-    /// 
-
     [ExcludeFromCodeCoverage]
     public static class MessagingConfiguration
     {
+        public const string InputQueueName = "developer-evaluation-events";
+
         /// <summary>
-        /// Registers all messaging components, publishers, subscribers, and Rebus configuration.
+        /// Registers Rebus (in-memory transport), the event handlers and the <see cref="IMessagePublisher"/>.
         /// </summary>
-        /// <param name="services">The service collection instance.</param>
         public static IServiceCollection AddMessaging(this IServiceCollection services)
         {
-            // TODO: register Rebus configuration and message handlers in future commits
+            services.AddRebus(configure => configure
+                .Transport(t => t.UseInMemoryTransport(new InMemNetwork(), InputQueueName)));
+
+            services.AutoRegisterHandlersFromAssemblyOf<SaleEventsLogHandler>();
+            services.AddScoped<IMessagePublisher, MessagePublisher>();
+
             return services;
         }
     }

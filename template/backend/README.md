@@ -2,7 +2,7 @@
 
 # 🛒 DeveloperStore · API de Vendas
 
-**API com CRUD completo de registros de vendas, construída com DDD, CQRS e o padrão External Identities.**
+**API da DeveloperStore: vendas (CRUD completo com regras de desconto e eventos), produtos, carrinhos, usuários e autenticação JWT. Construída com DDD, CQRS e o padrão External Identities.**
 
 ![.NET](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet&logoColor=white)
 ![C#](https://img.shields.io/badge/C%23-12-239120?logo=csharp&logoColor=white)
@@ -121,20 +121,80 @@ sale.totalAmount = Σ item.totalPrice
 
 ## 📡 API
 
-Rota base: **`/api/sale`**
+Todas as rotas ficam sob **`/api`** e seguem as definições da pasta [`.doc/`](../../.doc/general-api.md).
 
-| Método | Rota | Descrição |
+### 🔐 Autenticação
+
+1. Cadastre um usuário: `POST /api/users` (público)
+2. Faça login: `POST /api/auth/login` → `{ "token": "..." }`
+3. Envie o token no header `Authorization: Bearer {token}` (no Swagger, use o botão **Authorize**)
+
+São públicos: login, cadastro de usuário e a leitura do catálogo de produtos. O restante exige token.
+
+### Rotas
+
+| Recurso | Método | Rota | Descrição |
+|---|:---:|---|---|
+| **Auth** | POST | `/api/auth/login` | Autentica e devolve o JWT |
+| **Sales** | GET | `/api/sales` | Lista vendas (paginação, ordenação e filtros) |
+| | GET | `/api/sales/{id}` | Busca uma venda |
+| | POST | `/api/sales` | Cria uma venda |
+| | PUT | `/api/sales/{id}` | Atualiza uma venda |
+| | DELETE | `/api/sales/{id}` | Exclui uma venda |
+| | PATCH | `/api/sales/{id}/cancel` | Cancela a venda |
+| | PATCH | `/api/sales/{id}/items/{itemId}/cancel` | Cancela um item da venda |
+| **Products** | GET | `/api/products` | Lista produtos |
+| | GET | `/api/products/{id}` | Busca um produto |
+| | GET | `/api/products/categories` | Lista as categorias |
+| | GET | `/api/products/category/{category}` | Lista os produtos de uma categoria |
+| | POST / PUT / DELETE | `/api/products[/{id}]` | Cria, atualiza e exclui produtos |
+| **Carts** | GET / POST | `/api/carts` | Lista e cria carrinhos |
+| | GET / PUT / DELETE | `/api/carts/{id}` | Busca, atualiza e exclui um carrinho |
+| **Users** | GET / POST | `/api/users` | Lista e cadastra usuários |
+| | GET / PUT / DELETE | `/api/users/{id}` | Busca, atualiza e exclui um usuário |
+
+### 🔎 Paginação, ordenação e filtros
+
+Válido para todas as listagens:
+
+```http
+GET /api/products?_page=2&_size=20&_order="price desc, title asc"
+GET /api/products?title=Fjallraven*&category=men's clothing&_minPrice=50&_maxPrice=200
+GET /api/sales?customerName=Bar*&cancelled=false&_minDate=2025-01-01
+```
+
+- `_page` (padrão 1) e `_size` (padrão 10, máximo 100)
+- `_order`: campos no mesmo formato do JSON de resposta, `asc` (padrão) ou `desc`; campos aninhados com ponto (`rating.rate desc`)
+- `campo=valor`: igualdade; em textos, `*` no início/fim faz busca parcial (sem diferenciar maiúsculas)
+- `_minCampo` / `_maxCampo`: faixas para números e datas
+- o mesmo campo informado mais de uma vez é combinado com **OU**; campos diferentes, com **E**
+
+Resposta das listagens:
+
+```json
+{ "data": [ ... ], "totalItems": 42, "currentPage": 1, "totalPages": 5 }
+```
+
+### ❗ Formato de erro
+
+```json
+{ "type": "ResourceNotFound", "error": "Sale not found", "detail": "The sale with ID ... does not exist in our database" }
+```
+
+| HTTP | `type` | Quando |
 |:---:|---|---|
-| ![POST](https://img.shields.io/badge/POST-49cc90) | `/api/sale` | Cria uma venda |
-| ![GET](https://img.shields.io/badge/GET-61affe) | `/api/sale/{id}` | Busca uma venda pelo id |
-| ![GET](https://img.shields.io/badge/GET-61affe) | `/api/sale/Fetch?page=1&pageSize=10` | Lista as vendas paginadas, das mais recentes para as mais antigas |
-| ![PUT](https://img.shields.io/badge/PUT-fca130) | `/api/sale/{id}` | Atualiza uma venda |
-| ![DELETE](https://img.shields.io/badge/DELETE-f93e3e) | `/api/sale/{id}` | Exclui uma venda |
+| 400 | `ValidationError` | dados inválidos, JSON malformado, parâmetros de listagem inválidos |
+| 400 | `BusinessRuleViolation` | regra de negócio violada (ex.: alterar venda cancelada) |
+| 401 | `AuthenticationError` | token ausente/inválido ou credenciais inválidas |
+| 404 | `ResourceNotFound` | recurso inexistente |
+| 409 | `ResourceConflict` | valor único duplicado (número da venda, e-mail, username) |
+| 500 | `InternalServerError` | erro inesperado |
 
 ### ✍️ Exemplo: criar uma venda
 
 ```http
-POST /api/sale
+POST /api/sales
+Authorization: Bearer {token}
 Content-Type: application/json
 
 {
@@ -159,23 +219,25 @@ Resultado:
 | Refrigerante 2L | 2 | 11,50 | 0% | **23,00** |
 | | | | **Total da venda** | **118,04** |
 
-### 🔄 Como funciona a atualização
+### 🔄 Atualização e cancelamento
 
 - `date` não informada → mantém a data original da venda
-- item **com** `id` → é atualizado
-- item **sem** `id` → é adicionado
-- item existente que não veio no payload → é removido
+- item **com** `id` → é atualizado; item **sem** `id` → é adicionado; item que não veio no payload → é removido
+- cancelar um item recalcula descontos e total (itens cancelados não entram na conta)
+- venda cancelada não pode ser alterada nem cancelada de novo
 
-📂 Há mais requisições prontas no arquivo [`Ambev.DeveloperEvaluation.WebApi.http`](src/Ambev.DeveloperEvaluation.WebApi/Ambev.DeveloperEvaluation.WebApi.http), que funciona no Visual Studio e no REST Client do VS Code.
+📂 Há requisições prontas (com login) no arquivo [`Ambev.DeveloperEvaluation.WebApi.http`](src/Ambev.DeveloperEvaluation.WebApi/Ambev.DeveloperEvaluation.WebApi.http), que funciona no Visual Studio e no REST Client do VS Code.
 
 ### 📣 Eventos de domínio
 
-Os eventos são publicados via `IMessagePublisher`. Não é preciso um message broker: a implementação atual registra os eventos no log da aplicação.
+Os eventos são publicados com **Rebus** usando o transporte em memória, então não é preciso um message broker: um handler consome os eventos e registra no log da aplicação. Trocar para RabbitMQ/Azure Service Bus é só configuração em `MessagingConfiguration`.
 
 | Evento | Publicado quando |
 |---|---|
 | `SaleCreatedEvent` | uma venda é criada |
-| `SaleUpdatedEvent` | uma venda é alterada |
+| `SaleModifiedEvent` | uma venda é alterada |
+| `SaleCancelledEvent` | uma venda é cancelada |
+| `ItemCancelledEvent` | um item da venda é cancelado |
 | `SaleDeletedEvent` | uma venda é excluída |
 
 ---
@@ -189,18 +251,18 @@ flowchart LR
     VB --> H[Application<br/>Handlers]
     H --> S[SaleService<br/>regras de desconto]
     S --> R[(ORM<br/>EF Core · PostgreSQL)]
-    S -.->|eventos| M[Messaging<br/>IMessagePublisher]
+    S -.->|eventos| M[Messaging<br/>Rebus]
 ```
 
 | Camada | Responsabilidade |
 |---|---|
-| **WebApi** | Controllers, requests, profiles do AutoMapper, middleware, `Program` |
-| **Application** | Commands/handlers (CQRS), validadores, `SaleService` com as regras de negócio |
-| **Domain** | Entidades `Sale` e `SaleItem`, contratos de repositório e serviço |
-| **ORM** | `DefaultContext`, mapeamentos, migrations, `SaleRepository` |
-| **Messaging** | Eventos de domínio e publisher |
+| **WebApi** | Controllers, middleware de erros, paginação, `Program` |
+| **Application** | Commands/queries e handlers (CQRS), validadores, profiles do AutoMapper, parser de paginação/filtros, `SaleService` |
+| **Domain** | Entidades (`Sale`, `SaleItem`, `Product`, `Cart`, `User`), value objects, regras de desconto, exceções e contratos |
+| **ORM** | `DefaultContext`, mapeamentos, migrations, repositórios e filtros/ordenação dinâmicos |
+| **Messaging** | Eventos de domínio, publisher e handlers (Rebus) |
 | **IoC** | Módulos de injeção de dependência |
-| **Common** | Pipeline de validação e logging (Serilog) |
+| **Common** | Pipeline de validação, logging (Serilog), JWT e hash de senha (BCrypt) |
 
 <details>
 <summary>📁 Estrutura de pastas</summary>
@@ -234,8 +296,8 @@ root
 | **Runtime** | .NET 8 · ASP.NET Core Web API · Swagger |
 | **Dados** | EF Core 8 · Npgsql · PostgreSQL 13 |
 | **Padrões** | DDD · CQRS com MediatR · External Identities · Repository |
-| **Bibliotecas** | AutoMapper · FluentValidation · Serilog |
-| **Testes** | xUnit · Moq · NSubstitute · Bogus · Coverlet |
+| **Bibliotecas** | MediatR · AutoMapper · FluentValidation · Rebus · Serilog · BCrypt · JWT |
+| **Testes** | xUnit · NSubstitute · Bogus · FluentAssertions · EF Core InMemory · WebApplicationFactory · Coverlet |
 | **Infra** | Docker · Docker Compose |
 
 ---
@@ -253,22 +315,24 @@ dotnet test Ambev.DeveloperEvaluation.sln
 coverage-report.bat      # Windows
 ```
 
-Os testes unitários cobrem:
-
-- ✅ faixas de desconto e o limite de 20 itens
-- ✅ validadores dos commands (create, update, get, fetch, delete)
-- ✅ handlers e o `SaleService`
-- ✅ definição da data da venda e External Identities
-- ✅ publicação de eventos
+| Projeto | O que cobre |
+|---|---|
+| **Unit** | regras de desconto e limite de 20 itens, cancelamentos, handlers, `SaleService` e eventos, validadores, parser de paginação/filtros, JWT/BCrypt, configuração do AutoMapper (NSubstitute + Bogus) |
+| **Integration** | repositórios com EF Core InMemory: filtros com curinga, faixas `_min`/`_max`, ordenação por campo aninhado, sincronização de itens |
+| **Functional** | API completa via `WebApplicationFactory`: ciclo de vida da venda, autenticação, formato de erro, paginação, produtos, carrinhos e usuários |
 
 ---
 
 ## 🗺️ Roadmap
 
-- [ ] Endpoints para cancelar a venda e um item específico, publicando `SaleCancelled` e `ItemCancelled`
-- [ ] Desconsiderar itens cancelados nos totais e descontos
-- [ ] DTOs de resposta em vez de expor as entidades de domínio; `404` no `GET /api/sale/{id}`
-- [ ] Testes de integração e funcionais com Testcontainers e `WebApplicationFactory`
+- [x] Endpoints para cancelar a venda e um item específico, publicando `SaleCancelled` e `ItemCancelled`
+- [x] Desconsiderar itens cancelados nos totais e descontos
+- [x] DTOs de resposta em vez de expor as entidades de domínio; `404` no `GET /api/sales/{id}`
+- [x] Products, Carts, Users e Auth conforme a pasta `.doc/`
+- [x] Paginação, ordenação e filtros padronizados (`_page`, `_size`, `_order`, `*`, `_min`/`_max`)
+- [ ] Testes de integração com PostgreSQL real (Testcontainers)
+- [ ] Autorização por perfil (Customer / Manager / Admin)
+- [ ] MongoDB (citado na stack do desafio) — hoje todos os recursos usam PostgreSQL
 - [ ] CI com GitHub Actions (build + testes)
 
 ---

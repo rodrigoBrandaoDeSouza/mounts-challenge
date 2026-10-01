@@ -4,11 +4,6 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
-  <ItemGroup>
-    <Compile Remove="ValueObjects\**" />
-    <EmbeddedResource Remove="ValueObjects\**" />
-    <None Remove="ValueObjects\**" />
-  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="FluentValidation" Version="11.10.0" />

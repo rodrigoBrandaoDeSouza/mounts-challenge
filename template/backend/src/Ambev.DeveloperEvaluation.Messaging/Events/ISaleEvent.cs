@@ -1,18 +1,14 @@
-﻿namespace Ambev.DeveloperEvaluation.Messaging.Events
+namespace Ambev.DeveloperEvaluation.Messaging.Events
 {
     /// <summary>
-    /// Base interface for all sale-related events.
+    /// Base contract of every sale-related event.
     /// </summary>
     public interface ISaleEvent
     {
-        /// <summary>
-        /// Gets or sets the unique identifier of the sale related to the event.
-        /// </summary>
+        /// <summary>Identifier of the sale related to the event.</summary>
         Guid SaleId { get; set; }
 
-        /// <summary>
-        /// Gets or sets the timestamp when the event occurred.
-        /// </summary>
+        /// <summary>When the event occurred (UTC).</summary>
         DateTime OccurredAt { get; set; }
     }
 }

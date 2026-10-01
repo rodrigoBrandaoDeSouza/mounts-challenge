@@ -1,7 +1,44 @@
-﻿@HostAddress = http://localhost:5119
+@HostAddress = http://localhost:5119
+# With docker compose: @HostAddress = http://localhost:8080
+
+### 1. Register a user (public)
+POST {{HostAddress}}/api/users
+Content-Type: application/json
+
+{
+  "email": "ze@bardoze.com",
+  "username": "ze",
+  "password": "Senha@123",
+  "name": { "firstname": "José", "lastname": "Silva" },
+  "address": {
+    "city": "Toledo",
+    "street": "Rua Barão do Rio Branco",
+    "number": 100,
+    "zipcode": "85900-000",
+    "geolocation": { "lat": "-24.7136", "long": "-53.7405" }
+  },
+  "phone": "+55 45 99999-0000",
+  "status": "Active",
+  "role": "Admin"
+}
+
+### 2. Login (copy the token below)
+# @name login
+POST {{HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "ze",
+  "password": "Senha@123"
+}
+
+###
+@token = {{login.response.body.token}}
 
 ### Create sale
-POST {{HostAddress}}/api/sale
+# @name createSale
+POST {{HostAddress}}/api/sales
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -17,16 +54,21 @@ Content-Type: application/json
   ]
 }
 
-### Get sale by id
-GET {{HostAddress}}/api/sale/{{saleId}}
-Accept: application/json
+###
+@saleId = {{createSale.response.body.id}}
+@saleItemId = {{createSale.response.body.items[0].id}}
 
-### Fetch sales (paginated)
-GET {{HostAddress}}/api/sale/Fetch?page=1&pageSize=10
-Accept: application/json
+### Get sale by id
+GET {{HostAddress}}/api/sales/{{saleId}}
+Authorization: Bearer {{token}}
+
+### List sales (pagination, ordering and filters)
+GET {{HostAddress}}/api/sales?_page=1&_size=10&_order=date desc, saleNumber asc&customerName=Bar*&_minTotalAmount=50
+Authorization: Bearer {{token}}
 
 ### Update sale (items with "id" are updated, items without "id" are added, missing items are removed)
-PUT {{HostAddress}}/api/sale/{{saleId}}
+PUT {{HostAddress}}/api/sales/{{saleId}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -40,5 +82,60 @@ Content-Type: application/json
   ]
 }
 
+### Cancel an item of the sale (ItemCancelled)
+PATCH {{HostAddress}}/api/sales/{{saleId}}/items/{{saleItemId}}/cancel
+Authorization: Bearer {{token}}
+
+### Cancel the sale (SaleCancelled)
+PATCH {{HostAddress}}/api/sales/{{saleId}}/cancel
+Authorization: Bearer {{token}}
+
 ### Delete sale
-DELETE {{HostAddress}}/api/sale/{{saleId}}
+DELETE {{HostAddress}}/api/sales/{{saleId}}
+Authorization: Bearer {{token}}
+
+### Create product
+# @name createProduct
+POST {{HostAddress}}/api/products
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Fjallraven - Foldsack No. 1 Backpack, Fits 15 Laptops",
+  "price": 109.95,
+  "description": "Your perfect pack for everyday use and walks in the forest.",
+  "category": "men's clothing",
+  "image": "https://fakestoreapi.com/img/81fPKd-2AYL._AC_SL1500_.jpg",
+  "rating": { "rate": 3.9, "count": 120 }
+}
+
+###
+@productId = {{createProduct.response.body.id}}
+
+### List products (public)
+GET {{HostAddress}}/api/products?_page=1&_size=10&_order=price desc, title&title=Fjallraven*&_minPrice=50
+
+### Product categories (public)
+GET {{HostAddress}}/api/products/categories
+
+### Products of a category (public)
+GET {{HostAddress}}/api/products/category/men's clothing
+
+### Create cart
+POST {{HostAddress}}/api/carts
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "userId": 1,
+  "date": "2025-10-20T00:00:00Z",
+  "products": [ { "productId": {{productId}}, "quantity": 2 } ]
+}
+
+### List carts
+GET {{HostAddress}}/api/carts?_order=id desc&_minDate=2025-01-01
+Authorization: Bearer {{token}}
+
+### List users
+GET {{HostAddress}}/api/users?_order=username asc&role=Admin
+Authorization: Bearer {{token}}

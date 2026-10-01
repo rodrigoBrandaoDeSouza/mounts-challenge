@@ -1,12 +1,16 @@
-﻿using FluentValidation;
+using FluentValidation;
 using MediatR;
 using System.Diagnostics.CodeAnalysis;
 
 namespace Ambev.DeveloperEvaluation.Common.Validation;
 
+/// <summary>
+/// MediatR pipeline behavior that runs every FluentValidation validator of the request
+/// and throws a <see cref="ValidationException"/> when there are failures.
+/// </summary>
 [ExcludeFromCodeCoverage]
 public class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
-    where TRequest : IRequest<TResponse>
+    where TRequest : notnull
 {
     private readonly IEnumerable<IValidator<TRequest>> _validators;
 

@@ -1,49 +1,29 @@
-﻿using Ambev.DeveloperEvaluation.Domain.Entities;
+using Ambev.DeveloperEvaluation.Domain.Common;
+using Ambev.DeveloperEvaluation.Domain.Entities;
 
 namespace Ambev.DeveloperEvaluation.Domain.Repositories
 {
     /// <summary>
-    /// Repository interface for Sale entity operations
+    /// Repository of the <see cref="Sale"/> aggregate.
     /// </summary>
     public interface ISaleRepository
     {
-        /// <summary>
-        /// Creates a new sale in the repository
-        /// </summary>
-        /// <param name="sale">The sale to create</param>
-        /// <param name="cancellationToken">Cancellation token</param>
-        /// <returns>The created sale</returns>
+        /// <summary>Persists a new sale.</summary>
         Task<Sale> CreateAsync(Sale sale, CancellationToken cancellationToken = default);
 
-        /// <summary>
-        /// Retrieves a sale by its unique identifier
-        /// </summary>
-        /// <param name="id">The unique identifier of the sale</param>
-        /// <param name="cancellationToken">Cancellation token</param>
-        /// <returns>The sale if found, null otherwise</returns>
+        /// <summary>Retrieves a sale (with its items) by its identifier, or null when it does not exist.</summary>
         Task<Sale?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
-        /// <summary>
-        /// Retrieves all sales in the repository
-        /// </summary>
-        /// <param name="cancellationToken">Cancellation token</param>
-        /// <returns>A collection of sales</returns>
-        Task<IEnumerable<Sale>> FetchSales(int page, int pageSize, CancellationToken cancellationToken = default);
+        /// <summary>Retrieves a page of sales applying the filters and the ordering.</summary>
+        Task<PagedResult<Sale>> ListAsync(QueryOptions options, CancellationToken cancellationToken = default);
 
-        /// <summary>
-        /// Updates an existing sale in the repository
-        /// </summary>
-        /// <param name="sale">The sale to update</param>
-        /// <param name="cancellationToken">Cancellation token</param>
-        /// <returns>The updated sale</returns>
+        /// <summary>Persists the changes of an existing sale (including added, changed and removed items).</summary>
         Task<Sale> UpdateAsync(Sale sale, CancellationToken cancellationToken = default);
 
-        /// <summary>
-        /// Deletes a sale from the repository
-        /// </summary>
-        /// <param name="id">The unique identifier of the sale to delete</param>
-        /// <param name="cancellationToken">Cancellation token</param>
-        /// <returns>True if the sale was deleted, false if not found</returns>
+        /// <summary>Deletes a sale. Returns false when it does not exist.</summary>
         Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default);
+
+        /// <summary>Checks whether another sale already uses the given sale number.</summary>
+        Task<bool> SaleNumberExistsAsync(string saleNumber, Guid? ignoreSaleId = null, CancellationToken cancellationToken = default);
     }
 }

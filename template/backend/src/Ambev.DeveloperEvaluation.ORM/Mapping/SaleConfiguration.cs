@@ -19,6 +19,9 @@ namespace Ambev.DeveloperEvaluation.ORM.Mapping
                 .IsRequired()
                 .HasMaxLength(50);
 
+            builder.HasIndex(s => s.SaleNumber)
+                .IsUnique();
+
             builder.Property(s => s.Date)
                 .IsRequired();
 
@@ -45,6 +48,8 @@ namespace Ambev.DeveloperEvaluation.ORM.Mapping
 
             builder.Property(s => s.Cancelled)
                 .HasDefaultValue(false);
+
+            builder.HasIndex(s => s.Date);
 
             builder.HasMany(s => s.Items)
                 .WithOne(i => i.Sale)
