@@ -1,6 +1,44 @@
-@Ambev.DeveloperEvaluation.WebApi_HostAddress = http://localhost:5119
+﻿@HostAddress = http://localhost:5119
 
-GET {{Ambev.DeveloperEvaluation.WebApi_HostAddress}}/weatherforecast/
+### Create sale
+POST {{HostAddress}}/api/sale
+Content-Type: application/json
+
+{
+  "saleNumber": "S-0001",
+  "date": "2025-10-20T14:30:00Z",
+  "customerId": "6f1c2a4e-0000-4000-8000-000000000001",
+  "customerName": "Bar do Zé",
+  "branchId": "6f1c2a4e-0000-4000-8000-0000000000b1",
+  "branchName": "Filial Toledo",
+  "items": [
+    { "productId": "6f1c2a4e-0000-4000-8000-0000000000a1", "productName": "Cerveja 600ml", "quantity": 12, "unitPrice": 9.90 },
+    { "productId": "6f1c2a4e-0000-4000-8000-0000000000a2", "productName": "Refrigerante 2L", "quantity": 2, "unitPrice": 11.50 }
+  ]
+}
+
+### Get sale by id
+GET {{HostAddress}}/api/sale/{{saleId}}
 Accept: application/json
 
-###
+### Fetch sales (paginated)
+GET {{HostAddress}}/api/sale/Fetch?page=1&pageSize=10
+Accept: application/json
+
+### Update sale (items with "id" are updated, items without "id" are added, missing items are removed)
+PUT {{HostAddress}}/api/sale/{{saleId}}
+Content-Type: application/json
+
+{
+  "saleNumber": "S-0001",
+  "customerId": "6f1c2a4e-0000-4000-8000-000000000001",
+  "customerName": "Bar do Zé",
+  "branchId": "6f1c2a4e-0000-4000-8000-0000000000b1",
+  "branchName": "Filial Toledo",
+  "items": [
+    { "id": "{{saleItemId}}", "productId": "6f1c2a4e-0000-4000-8000-0000000000a1", "productName": "Cerveja 600ml", "quantity": 5, "unitPrice": 9.90 }
+  ]
+}
+
+### Delete sale
+DELETE {{HostAddress}}/api/sale/{{saleId}}
