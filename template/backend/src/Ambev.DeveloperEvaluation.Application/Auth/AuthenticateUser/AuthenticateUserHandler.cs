@@ -1,52 +1,33 @@
-using System.Threading;
-using System.Threading.Tasks;
 using Ambev.DeveloperEvaluation.Common.Security;
+using Ambev.DeveloperEvaluation.Domain.Exceptions;
 using Ambev.DeveloperEvaluation.Domain.Repositories;
-using Ambev.DeveloperEvaluation.Domain.Specifications;
 using MediatR;
 
-namespace Ambev.DeveloperEvaluation.Application.Auth.AuthenticateUser
+namespace Ambev.DeveloperEvaluation.Application.Auth.AuthenticateUser;
+
+public class AuthenticateUserHandler : IRequestHandler<AuthenticateUserCommand, AuthenticateUserResult>
 {
-    public class AuthenticateUserHandler : IRequestHandler<AuthenticateUserCommand, AuthenticateUserResult>
+    private readonly IUserRepository _repository;
+    private readonly IPasswordHasher _passwordHasher;
+    private readonly IJwtTokenGenerator _jwtTokenGenerator;
+
+    public AuthenticateUserHandler(IUserRepository repository, IPasswordHasher passwordHasher, IJwtTokenGenerator jwtTokenGenerator)
     {
-        private readonly IUserRepository _userRepository;
-        private readonly IPasswordHasher _passwordHasher;
-        private readonly IJwtTokenGenerator _jwtTokenGenerator;
+        _repository = repository;
+        _passwordHasher = passwordHasher;
+        _jwtTokenGenerator = jwtTokenGenerator;
+    }
 
-        public AuthenticateUserHandler(
-            IUserRepository userRepository,
-            IPasswordHasher passwordHasher,
-            IJwtTokenGenerator jwtTokenGenerator)
-        {
-            _userRepository = userRepository;
-            _passwordHasher = passwordHasher;
-            _jwtTokenGenerator = jwtTokenGenerator;
-        }
+    public async Task<AuthenticateUserResult> Handle(AuthenticateUserCommand request, CancellationToken cancellationToken)
+    {
+        var user = await _repository.GetByUsernameAsync(request.Username, cancellationToken);
 
-        public async Task<AuthenticateUserResult> Handle(AuthenticateUserCommand request, CancellationToken cancellationToken)
-        {
-            var user = await _userRepository.GetByEmailAsync(request.Email, cancellationToken);
-            
-            if (user == null || !_passwordHasher.VerifyPassword(request.Password, user.Password))
-            {
-                throw new UnauthorizedAccessException("Invalid credentials");
-            }
+        if (user is null || !_passwordHasher.VerifyPassword(request.Password, user.Password))
+            throw new InvalidCredentialsException("Invalid username or password");
 
-            var activeUserSpec = new ActiveUserSpecification();
-            if (!activeUserSpec.IsSatisfiedBy(user))
-            {
-                throw new UnauthorizedAccessException("User is not active");
-            }
+        if (!user.IsActive)
+            throw new InvalidCredentialsException($"The user is {user.Status.ToString().ToLowerInvariant()} and cannot sign in");
 
-            var token = _jwtTokenGenerator.GenerateToken(user);
-
-            return new AuthenticateUserResult
-            {
-                Token = token,
-                Email = user.Email,
-                Name = user.Username,
-                Role = user.Role.ToString()
-            };
-        }
+        return new AuthenticateUserResult { Token = _jwtTokenGenerator.GenerateToken(user) };
     }
 }

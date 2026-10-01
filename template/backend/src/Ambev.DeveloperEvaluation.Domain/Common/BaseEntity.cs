@@ -1,7 +1,9 @@
 ﻿using Ambev.DeveloperEvaluation.Common.Validation;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Ambev.DeveloperEvaluation.Domain.Common;
 
+[ExcludeFromCodeCoverage]
 public class BaseEntity : IComparable<BaseEntity>
 {
     public Guid Id { get; set; }

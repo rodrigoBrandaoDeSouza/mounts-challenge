@@ -8,14 +8,15 @@ using Serilog.Exceptions;
 using Serilog.Exceptions.Core;
 using Serilog.Exceptions.EntityFrameworkCore.Destructurers;
 using Serilog.Sinks.SystemConsole.Themes;
-using Serilog.Templates;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Ambev.DeveloperEvaluation.Common.Logging;
 
-
-
 /// <summary> Add default Logging configuration to project. This configuration supports Serilog logs with DataDog compatible output.</summary>
+/// 
+
+[ExcludeFromCodeCoverage]
 public static class LoggingExtension
 {
     /// <summary>

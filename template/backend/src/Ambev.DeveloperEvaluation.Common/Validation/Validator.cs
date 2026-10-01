@@ -1,7 +1,9 @@
 ﻿using FluentValidation;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Ambev.DeveloperEvaluation.Common.Validation;
 
+[ExcludeFromCodeCoverage]
 public static class Validator
 {
     public static async Task<IEnumerable<ValidationErrorDetail>> ValidateAsync<T>(T instance)

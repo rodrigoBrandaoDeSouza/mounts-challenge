@@ -11,6 +11,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="11.10.0" />
     <PackageReference Include="MediatR" Version="12.4.1" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.10">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -22,13 +23,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Ambev.DeveloperEvaluation.IoC\Ambev.DeveloperEvaluation.IoC.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Features\Users\GetUser\" />
-    <Folder Include="Features\Users\DeleteUser\" />
-    <Folder Include="Features\Users\ListUsers\" />
-    <Folder Include="Features\Users\UpdateUser\" />
   </ItemGroup>
 
 </Project>

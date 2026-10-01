@@ -1,37 +1,42 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
+using Ambev.DeveloperEvaluation.Application.Common.Querying;
+using Ambev.DeveloperEvaluation.Domain.Common;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Ambev.DeveloperEvaluation.WebApi.Common;
 
-[Route("api/[controller]")]
 [ApiController]
-public class BaseController : ControllerBase
+[Produces("application/json")]
+public abstract class BaseController : ControllerBase
 {
-    protected int GetCurrentUserId() =>
-            int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? throw new NullReferenceException());
+    private static readonly HashSet<string> ReservedQueryParameters = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "_page", "_size", "_order"
+    };
 
-    protected string GetCurrentUserEmail() =>
-        User.FindFirst(ClaimTypes.Email)?.Value ?? throw new NullReferenceException();
+    /// <summary>
+    /// Builds a list query from the query string: <c>_page</c>, <c>_size</c>, <c>_order</c>
+    /// and every other parameter as a filter.
+    /// </summary>
+    protected TQuery BuildListQuery<TQuery>(int? page, int? size, string? order) where TQuery : ListQuery, new()
+    {
+        var query = new TQuery
+        {
+            Page = page,
+            Size = size,
+            Order = order
+        };
 
-    protected IActionResult Ok<T>(T data) =>
-            base.Ok(new ApiResponseWithData<T> { Data = data, Success = true });
+        foreach (var (key, values) in Request.Query)
+        {
+            if (ReservedQueryParameters.Contains(key))
+                continue;
 
-    protected IActionResult Created<T>(string routeName, object routeValues, T data) =>
-        base.CreatedAtRoute(routeName, routeValues, new ApiResponseWithData<T> { Data = data, Success = true });
+            query.Filters[key] = values.Where(v => v is not null).Select(v => v!).ToArray();
+        }
 
-    protected IActionResult BadRequest(string message) =>
-        base.BadRequest(new ApiResponse { Message = message, Success = false });
+        return query;
+    }
 
-    protected IActionResult NotFound(string message = "Resource not found") =>
-        base.NotFound(new ApiResponse { Message = message, Success = false });
-
-    protected IActionResult OkPaginated<T>(PaginatedList<T> pagedList) =>
-            Ok(new PaginatedResponse<T>
-            {
-                Data = pagedList,
-                CurrentPage = pagedList.CurrentPage,
-                TotalPages = pagedList.TotalPages,
-                TotalCount = pagedList.TotalCount,
-                Success = true
-            });
+    protected IActionResult OkPaginated<T>(PagedResult<T> page) =>
+        Ok(PaginatedResponse<T>.From(page));
 }

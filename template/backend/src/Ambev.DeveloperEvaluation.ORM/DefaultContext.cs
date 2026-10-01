@@ -1,4 +1,4 @@
-﻿using Ambev.DeveloperEvaluation.Domain.Entities;
+using Ambev.DeveloperEvaluation.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
@@ -8,6 +8,11 @@ namespace Ambev.DeveloperEvaluation.ORM;
 
 public class DefaultContext : DbContext
 {
+    public DbSet<Sale> Sales { get; set; }
+    public DbSet<SaleItem> SaleItems { get; set; }
+    public DbSet<Product> Products { get; set; }
+    public DbSet<Cart> Carts { get; set; }
+    public DbSet<CartProduct> CartProducts { get; set; }
     public DbSet<User> Users { get; set; }
 
     public DefaultContext(DbContextOptions<DefaultContext> options) : base(options)
@@ -20,6 +25,10 @@ public class DefaultContext : DbContext
         base.OnModelCreating(modelBuilder);
     }
 }
+
+/// <summary>
+/// Design-time factory used by the EF Core tools (dotnet ef migrations ...).
+/// </summary>
 public class YourDbContextFactory : IDesignTimeDbContextFactory<DefaultContext>
 {
     public DefaultContext CreateDbContext(string[] args)
@@ -32,10 +41,7 @@ public class YourDbContextFactory : IDesignTimeDbContextFactory<DefaultContext>
         var builder = new DbContextOptionsBuilder<DefaultContext>();
         var connectionString = configuration.GetConnectionString("DefaultConnection");
 
-        builder.UseNpgsql(
-               connectionString,
-               b => b.MigrationsAssembly("Ambev.DeveloperEvaluation.WebApi")
-        );
+        builder.UseNpgsql(connectionString);
 
         return new DefaultContext(builder.Options);
     }

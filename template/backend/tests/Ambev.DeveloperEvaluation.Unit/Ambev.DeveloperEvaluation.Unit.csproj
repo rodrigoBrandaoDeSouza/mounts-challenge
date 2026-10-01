@@ -29,13 +29,13 @@
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="Roslynator.Testing.CSharp.Xunit" Version="4.12.4" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<ProjectReference Include="..\..\src\Ambev.DeveloperEvaluation.Domain\Ambev.DeveloperEvaluation.Domain.csproj" />
 		<ProjectReference Include="..\..\src\Ambev.DeveloperEvaluation.Application\Ambev.DeveloperEvaluation.Application.csproj" />
-		<ProjectReference Include="..\..\src\Ambev.DeveloperEvaluation.ORM\Ambev.DeveloperEvaluation.ORM.csproj" />
+		<ProjectReference Include="..\..\src\Ambev.DeveloperEvaluation.Messaging\Ambev.DeveloperEvaluation.Messaging.csproj" />
+		<ProjectReference Include="..\..\src\Ambev.DeveloperEvaluation.Common\Ambev.DeveloperEvaluation.Common.csproj" />
 	</ItemGroup>
 
 </Project>

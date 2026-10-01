@@ -1,45 +1,28 @@
-using MediatR;
-using FluentValidation;
+using Ambev.DeveloperEvaluation.Domain.Exceptions;
 using Ambev.DeveloperEvaluation.Domain.Repositories;
+using AutoMapper;
+using MediatR;
 
 namespace Ambev.DeveloperEvaluation.Application.Users.DeleteUser;
 
-/// <summary>
-/// Handler for processing DeleteUserCommand requests
-/// </summary>
-public class DeleteUserHandler : IRequestHandler<DeleteUserCommand, DeleteUserResponse>
+public class DeleteUserHandler : IRequestHandler<DeleteUserCommand, UserResult>
 {
-    private readonly IUserRepository _userRepository;
+    private readonly IUserRepository _repository;
+    private readonly IMapper _mapper;
 
-    /// <summary>
-    /// Initializes a new instance of DeleteUserHandler
-    /// </summary>
-    /// <param name="userRepository">The user repository</param>
-    /// <param name="validator">The validator for DeleteUserCommand</param>
-    public DeleteUserHandler(
-        IUserRepository userRepository)
+    public DeleteUserHandler(IUserRepository repository, IMapper mapper)
     {
-        _userRepository = userRepository;
+        _repository = repository;
+        _mapper = mapper;
     }
 
-    /// <summary>
-    /// Handles the DeleteUserCommand request
-    /// </summary>
-    /// <param name="request">The DeleteUser command</param>
-    /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>The result of the delete operation</returns>
-    public async Task<DeleteUserResponse> Handle(DeleteUserCommand request, CancellationToken cancellationToken)
+    public async Task<UserResult> Handle(DeleteUserCommand request, CancellationToken cancellationToken)
     {
-        var validator = new DeleteUserValidator();
-        var validationResult = await validator.ValidateAsync(request, cancellationToken);
+        var user = await _repository.GetByIdAsync(request.Id, cancellationToken)
+            ?? throw ResourceNotFoundException.For("User", request.Id);
 
-        if (!validationResult.IsValid)
-            throw new ValidationException(validationResult.Errors);
-
-        var success = await _userRepository.DeleteAsync(request.Id, cancellationToken);
-        if (!success)
-            throw new KeyNotFoundException($"User with ID {request.Id} not found");
-
-        return new DeleteUserResponse { Success = true };
+        var result = _mapper.Map<UserResult>(user);
+        await _repository.DeleteAsync(request.Id, cancellationToken);
+        return result;
     }
 }
